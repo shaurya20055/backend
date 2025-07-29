@@ -1,37 +1,68 @@
 require('dotenv').config();
 const express = require('express');
-// We no longer need FunctionCallingMode, so the import is simpler
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
+const pdf = require('pdf-parse');
 const memory = require('./memory.js');
 const tools = require('./tools.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- INITIALIZE THE GEMINI CLIENT (REVERTED TO DEFAULT TOOL CONFIG) ---
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: "You are an expert AI assistant for software development. You can read and write files, and search the web. You can perform multi-step tasks by calling tools sequentially. If a tool is not suitable for the user's request, respond directly.",
+    model: "gemini-1.5-flash",
+    systemInstruction: "You are an expert AI assistant for software development. Your responses should be clear and well-structured. Always format code snippets using markdown, for example: ```javascript\nconsole.log('hello');\n```.",
     tools: tools.geminiTools
-    // The toolConfig block has been removed to restore the default "AUTO" behavior
 });
 
-// The rest of your index.js file remains exactly the same...
-// ---SETUP MIDDLEWARE---
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ---API ROUTES---
+app.post('/upload', upload.single('file'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded.' });
+    }
+    try {
+        let textContent = '';
+        if (req.file.mimetype === 'application/pdf') {
+            const data = await pdf(req.file.buffer);
+            textContent = data.text;
+        } else if (req.file.mimetype.startsWith('text/')) {
+            textContent = req.file.buffer.toString('utf-8');
+        } else {
+            return res.status(400).json({ error: `Unsupported file type: ${req.file.mimetype}` });
+        }
+        res.json({ text: textContent });
+    } catch (error) {
+        console.error('Error processing file:', error);
+        res.status(500).json({ error: 'Failed to process file.' });
+    }
+});
+
+app.get('/sessions', async (req, res) => {
+    try {
+        const sessions = await memory.listSessions();
+        res.json(sessions);
+    } catch (error) {
+        console.error("Error listing sessions:", error);
+        res.status(500).json({ error: "Failed to list sessions." });
+    }
+});
+
 app.post('/ask', async (req, res) => {
-    const { prompt, sessionId } = req.body;
+    const { prompt, sessionId: topicName } = req.body;
     if (!prompt) return res.status(400).send({ error: 'Prompt is required' });
 
     try {
-        const rawHistory = await memory.getHistory(sessionId);
+        const canonicalSessionId = await memory.findOrCreateSession(topicName);
+        const rawHistory = await memory.getHistory(canonicalSessionId);
         
         let sanitizedHistory = [];
         let lastRole = null;
@@ -57,26 +88,16 @@ app.post('/ask', async (req, res) => {
 
             if (!functionCalls || functionCalls.length === 0) {
                 const finalResponse = response.text();
-                await memory.addMessage(sessionId, { role: 'user', content: prompt });
-                await memory.addMessage(sessionId, { role: 'assistant', content: finalResponse });
+                await memory.addMessage(canonicalSessionId, { role: 'user', content: prompt });
+                await memory.addMessage(canonicalSessionId, { role: 'assistant', content: finalResponse });
                 return res.send({ response: finalResponse });
             }
 
             const call = functionCalls[0];
             let toolResult;
-
             switch (call.name) {
                 case 'webSearch':
                     toolResult = await tools.webSearch(call.args.query);
-                    break;
-                case 'readFile':
-                    toolResult = await tools.readFile(call.args.filePath);
-                    break;
-                case 'writeFile':
-                    toolResult = await tools.writeFile(call.args.filePath, call.args.content);
-                    break;
-                case 'listFiles':
-                    toolResult = await tools.listFiles(call.args.directoryPath);
                     break;
                 default:
                     toolResult = "Unknown tool called.";
@@ -91,16 +112,6 @@ app.post('/ask', async (req, res) => {
     } catch (error) {
         console.error('Error calling Gemini:', error);
         res.status(500).send({ error: 'Failed to communicate with AI' });
-    }
-});
-
-app.get('/sessions', async (req, res) => {
-    try {
-        const sessions = await memory.listSessions();
-        res.json(sessions);
-    } catch (error) {
-        console.error("Error listing sessions:", error);
-        res.status(500).json({ error: "Failed to list sessions." });
     }
 });
 
