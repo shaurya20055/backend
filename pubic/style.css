@@ -1,22 +1,61 @@
+/* public/style.css */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: #f4f4f9;
     margin: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#app-container {
     display: flex;
-    justify-content: center;
-    align-items: center;
     height: 100vh;
 }
 
-#chat-container {
-    width: 90%;
-    max-width: 600px;
-    height: 80vh;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+#sidebar {
+    width: 250px;
+    background-color: #e9e9eb;
+    padding: 15px;
+    border-right: 1px solid #ddd;
     display: flex;
     flex-direction: column;
+}
+
+#sidebar h2 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #333;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
+}
+
+#session-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+}
+
+#session-list li {
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#session-list li:hover, #session-list li.active {
+    background-color: #d4d4d8;
+}
+
+#chat-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden; /* <-- This is the fix */
 }
 
 #chat-box {
@@ -28,52 +67,39 @@ body {
     gap: 15px;
 }
 
-.message {
-    padding: 10px 15px;
-    border-radius: 18px;
-    max-width: 75%;
-    line-height: 1.5;
+#input-area {
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background: #fff;
 }
 
-.user-message {
-    background-color: #007bff;
-    color: white;
-    align-self: flex-end;
-    border-bottom-right-radius: 4px;
-}
-
-.ai-message {
-    background-color: #e9e9eb;
-    color: #333;
-    align-self: flex-start;
-    border-bottom-left-radius: 4px;
+#session-input {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
 }
 
 #chat-form {
     display: flex;
-    padding: 15px;
-    border-top: 1px solid #ddd;
+    align-items: center;
 }
 
-#prompt-input {
-    flex-grow: 1;
-    border: 1px solid #ccc;
-    padding: 10px;
-    border-radius: 20px;
+.message, #prompt-input, #chat-form button, .file-upload-label {
     font-size: 16px;
 }
 
-#chat-form button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    margin-left: 10px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-#chat-form button:hover {
-    background-color: #0056b3;
-}
+.message { padding: 10px 15px; border-radius: 18px; max-width: 85%; line-height: 1.5; word-wrap: break-word; }
+.user-message { background-color: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+.ai-message { background-color: #f1f1f1; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
+#prompt-input { flex-grow: 1; border: 1px solid #ccc; padding: 10px; border-radius: 20px; }
+#chat-form button { background-color: #007bff; color: white; border: none; padding: 10px 20px; margin-left: 10px; border-radius: 20px; cursor: pointer; }
+#chat-form button:hover { background-color: #0056b3; }
+#file-input { display: none; }
+.file-upload-label { background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 20px; cursor: pointer; margin-right: 10px; white-space: nowrap; }
+.file-upload-label:hover { background-color: #5a6268; }
+#file-name-display { margin-right: 10px; font-size: 14px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; vertical-align: middle; }
+pre { background-color: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; font-size: 14px; }
+code { font-family: 'Courier New', Courier, monospace; }
